@@ -159,10 +159,10 @@ Pocket_soil_project/
 │   │   ├── result.txt.txt
 │   │   ├── confusion_matrix.png
 │   │   └── training_history.png
-│   ├── classification_report.txt
-│   ├── confusion_matrix.png
-│   ├── training_history.png
-│   └── training_results.json
+│   ├── classification_report.txt   # Save from CNN architecture that you will run
+│   ├── confusion_matrix.png        # Save from CNN architecture that you will run
+│   ├── training_history.png        # Save from CNN architecture that you will run
+│   └── training_results.json       # Save from CNN architecture that you will run
 ├── main.py                         # Complete training, evaluation, and CLI prediction script
 ├── requirements.txt                # Python package dependencies
 └── README.md                       # Project documentation
