@@ -2,13 +2,14 @@
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c)
-![Backbone](https://img.shields.io/badge/Backbone-EfficientNet--B0-success)
-![Test Accuracy](https://img.shields.io/badge/Test%20Accuracy-92.00%25-brightgreen)
+![Best Backbone](https://img.shields.io/badge/Best%20Backbone-ConvNeXt--Tiny-blueviolet)
+![Best Head](https://img.shields.io/badge/Best%20Head-Dual--Pool%20MLP-blueviolet)
+![Test Accuracy](https://img.shields.io/badge/Test%20Accuracy-93.50%25-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey)
 
 **Pocket Geologist** is a deep learning computer vision system built with PyTorch that predicts **soil erodibility** directly from field photographs. It classifies soil samples across **9 distinct soil types**, maps them to physical **USDA K-Factors** ($0.02 \text{ to } 0.69$), and computes both discrete and probability-weighted **Erodibility Risk Scores (`1/10` to `10/10`)**.
 
-Using a two-phase transfer learning pipeline, a **Dual-Pooling MLP** classifier head, dampened class-imbalance sampling, and Test-Time Augmentation (TTA), the system achieves **92.00% test accuracy** (`0.918` weighted F1-score, `0.3673` validation loss).
+Using a two-phase transfer learning pipeline, a **Dual-Pooling MLP** classifier head, dampened class-imbalance sampling, and Test-Time Augmentation (TTA), the best-performing configuration (**ConvNeXt-Tiny + Dual-Pool MLP**) achieves **93.50% test accuracy** (`0.934` weighted F1-score, `0.2475` best validation loss).
 
 ---
 
@@ -47,6 +48,80 @@ The dataset contains **1,331 total images** split via stratified sampling into *
 
 ---
 
+## 📊 Experimental Results — Multi-Backbone & Multi-Head Comparison
+
+All experiments were run on the same stratified 70/15/15 split (931 train / 200 val / 200 test), identical augmentation pipeline, dampened `WeightedRandomSampler`, label smoothing (`0.05`), and TTA-enabled evaluation. Only the backbone and classifier head were changed between runs.
+
+### Summary Leaderboard
+
+| Rank | Backbone | Head | Test Acc | Wtd F1 | Macro F1 | Best Val Acc | Best Val Loss | Total Params | Model Size | Train Time (CPU) |
+| :---: | :--- | :--- | :---: | :---: | :---: | :---: | :---: | ---: | :---: | :---: |
+| 🥇 | **ConvNeXt-Tiny** | **Dual-Pool MLP** | **93.50%** | **0.934** | **0.855** | 94.50% | 0.2475 | 28.6M | 109.2 MB | 41.0 min |
+| 🥈 | EfficientNet-B0 | Dual-Pool MLP | 92.00% | 0.918 | 0.872 | 91.00% | 0.3673 | 5.3M | 20.6 MB | 16.1 min |
+| 🥈 | EfficientNet-B0 | Cosine | 92.00% | 0.917 | 0.837 | 91.50% | 0.3429 | 4.7M | 18.1 MB | 23.0 min |
+| 4th | MobileNetV3-Large | Dual-Pool MLP | 91.50% | 0.914 | 0.866 | 89.00% | 0.4166 | 4.0M | 15.3 MB | 14.2 min |
+| 5th | ResNet-50 | Dual-Pool MLP | 84.00% | 0.843 | 0.732 | 89.50% | 0.4131 | 25.6M | 98.1 MB | 31.4 min |
+
+### Key Takeaways
+
+* **ConvNeXt-Tiny + Dual-Pool MLP is the clear winner** at **93.50%** test accuracy. Its modernized convolutional architecture with larger effective receptive fields excels at capturing soil texture patterns, and it held the highest validation accuracy (94.50%) during training.
+* **EfficientNet-B0 is the best efficiency pick** — it matches 92% accuracy with only **5.3M parameters** (5.4× fewer than ConvNeXt) and trains in just **16.1 minutes** on CPU.
+* **The Cosine head slightly trails Dual-Pool MLP** on the same EfficientNet-B0 backbone (same 92% accuracy but lower macro F1: 0.837 vs 0.872), confirming that dual-pooling captures complementary texture signals.
+* **MobileNetV3-Large** delivers **91.50%** accuracy in only **14.2 minutes** with the smallest model size (**15.3 MB**), making it ideal for edge/mobile deployment.
+* **ResNet-50 struggled** at 84% — its Phase 2 fine-tuning diverged (val loss spiked to >1.0 before early stop), and it completely failed on Peat Soil (0% recall). Its large parameter count (25.6M) with no modern training-friendly design made it a poor fit for this small dataset.
+
+---
+
+### Per-Class Accuracy Heatmap (All Configurations)
+
+| Soil Type (support) | ConvNeXt-Tiny + DPM | EffNet-B0 + DPM | EffNet-B0 + Cosine | MobileNetV3 + DPM | ResNet-50 + DPM |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Alluvial_Soil** (6) | 50.0% | 66.7% | 66.7% | 66.7% | 50.0% |
+| **Arid_Soil** (43) | **97.7%** | 95.3% | 93.0% | 95.3% | **97.7%** |
+| **Black Soil** (44) | **97.7%** | **97.7%** | **97.7%** | 90.9% | 77.3% |
+| **Cinder Soil** (5) | **100.0%** | **100.0%** | **100.0%** | **100.0%** | **100.0%** |
+| **Laterite Soil** (37) | **91.9%** | 83.8% | **91.9%** | **94.6%** | 83.8% |
+| **Mountain_Soil** (30) | **96.7%** | 93.3% | 93.3% | **96.7%** | 90.0% |
+| **Peat Soil** (4) | 50.0% | **50.0%** | 25.0% | **50.0%** | 0.0% |
+| **Red_Soil** (16) | **100.0%** | **100.0%** | **100.0%** | 87.5% | 81.2% |
+| **Yellow Soil** (15) | 86.7% | **93.3%** | 86.7% | 86.7% | 86.7% |
+
+> **Note:** Alluvial_Soil (6 test images) and Peat Soil (4 test images) have very small test supports, so their per-class accuracies are inherently volatile. All models achieve ≥ 50% on these rare classes except ResNet-50 on Peat Soil.
+
+---
+
+### Detailed Per-Class Metrics — 🥇 Best Model (ConvNeXt-Tiny + Dual-Pool MLP)
+
+| Soil Type | Precision | Recall | F1-Score | Correct / Total | Class Accuracy | Erodibility (Risk) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Alluvial_Soil** | 0.600 | 0.500 | 0.545 | 3 / 6 | 50.0% | 6/10 (Medium-High) |
+| **Arid_Soil** | 0.933 | 0.977 | 0.955 | 42 / 43 | 97.7% | 8/10 (High) |
+| **Black Soil** | 0.977 | 0.977 | 0.977 | 43 / 44 | 97.7% | 2/10 (Low) |
+| **Cinder Soil** | 0.833 | 1.000 | 0.909 | 5 / 5 | **100.0%** | 7/10 (High) |
+| **Laterite Soil** | 0.971 | 0.919 | 0.944 | 34 / 37 | 91.9% | 3/10 (Low) |
+| **Mountain_Soil** | 0.906 | 0.967 | 0.935 | 29 / 30 | 96.7% | 4/10 (Medium) |
+| **Peat Soil** | 0.500 | 0.500 | 0.500 | 2 / 4 | 50.0% | 3/10 (Low) |
+| **Red_Soil** | 1.000 | 1.000 | 1.000 | 16 / 16 | **100.0%** | 5/10 (Medium) |
+| **Yellow Soil** | 1.000 | 0.867 | 0.929 | 13 / 15 | 86.7% | 5/10 (Medium) |
+| **Macro Avg** | **0.858** | **0.856** | **0.855** | — | — | — |
+| **Weighted Avg** | **0.935** | **0.935** | **0.934** | **187 / 200** | **93.50%** | — |
+
+---
+
+### Training Dynamics Summary
+
+| Backbone + Head | P1 Best Val Acc | P1 Best Val Loss | P2 Best Val Acc | P2 Best Val Loss | P2 Stopped At | Converged? |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **ConvNeXt-Tiny + DPM** | 90.50% | 0.3624 | **94.50%** | **0.2475** | Epoch 18 | ✅ Smooth |
+| EfficientNet-B0 + DPM | 90.00% | 0.4379 | 91.00% | 0.3673 | Epoch 19 | ✅ Smooth |
+| EfficientNet-B0 + Cosine | 89.00% | 0.4048 | 91.50% | 0.3429 | Epoch 25 (full) | ✅ Smooth |
+| MobileNetV3-Large + DPM | 88.00% | 0.4892 | 89.00% | 0.4166 | Epoch 22 | ✅ Smooth |
+| ResNet-50 + DPM | 89.50% | 0.4131 | 89.50% | 0.4131* | Epoch 10 | ❌ Diverged |
+
+> *ResNet-50's Phase 2 **failed to improve** over Phase 1 — validation loss climbed from 0.47 → 1.04 across 10 epochs before early stopping. The Phase 1 checkpoint was restored as the best model, meaning fine-tuning was effectively skipped.
+
+---
+
 ## 📁 Project Structure
 
 ```text
@@ -62,12 +137,32 @@ Pocket_soil_project/
 │   ├── Red_Soil/
 │   └── Yellow Soil/
 ├── models/
-│   └── soil_erodibility_model.pth  # Saved best model checkpoint + metadata (20.6 MB)
+│   └── soil_erodibility_model.pth  # Saved best model checkpoint + metadata
 ├── results/
-│   ├── classification_report.txt   # Per-class Precision, Recall, F1 report
-│   ├── confusion_matrix.png        # Saved confusion matrix heatmap
-│   ├── training_history.png        # Phase 1 + Phase 2 Loss & Accuracy curves
-│   └── training_results.json       # Run metadata and accuracy summary
+│   ├── convnext_tiny dual_pool_mlp/    # 🥇 Best: 93.50% test accuracy
+│   │   ├── result.txt
+│   │   ├── confusion_matrix.png
+│   │   └── training_history.png
+│   ├── efficientnet_b0 + dual_pool_mlp/  # 🥈 92.00% test accuracy
+│   │   ├── result.txt
+│   │   ├── confusion_matrix.png
+│   │   └── training_history.png
+│   ├── efficientnet_b0 cosine/           # 🥈 92.00% test accuracy
+│   │   ├── result.txt
+│   │   ├── confusion_matrix.png
+│   │   └── training_history.png
+│   ├── mobilenet_v3_large dual_pool_mlp/ # 91.50% test accuracy
+│   │   ├── result.txt.txt
+│   │   ├── confusion_matrix.png
+│   │   └── training_history.png
+│   ├── resnet50 dual_pool_mlp/           # 84.00% test accuracy
+│   │   ├── result.txt.txt
+│   │   ├── confusion_matrix.png
+│   │   └── training_history.png
+│   ├── classification_report.txt
+│   ├── confusion_matrix.png
+│   ├── training_history.png
+│   └── training_results.json
 ├── main.py                         # Complete training, evaluation, and CLI prediction script
 ├── requirements.txt                # Python package dependencies
 └── README.md                       # Project documentation
@@ -79,7 +174,7 @@ Pocket_soil_project/
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/YOUR_USERNAME/pocket-geologist.git](https://github.com/YOUR_USERNAME/pocket-geologist.git)
+git clone https://github.com/YOUR_USERNAME/pocket-geologist.git
 cd pocket-geologist
 ```
 
@@ -94,16 +189,7 @@ source venv/bin/activate
 pip install torch torchvision pillow scikit-learn matplotlib numpy
 ```
 
-Or create a `requirements.txt` file with:
-```text
-torch>=2.0.0
-torchvision>=0.15.0
-Pillow>=9.0.0
-scikit-learn>=1.0.0
-matplotlib>=3.5.0
-numpy>=1.21.0
-```
-And install via:
+Or install via:
 ```bash
 pip install -r requirements.txt
 ```
@@ -122,7 +208,7 @@ RESULTS_DIR     = BASE_DIR / 'results'
 ## 🚀 Usage
 
 ### 1. Train the Default Model (`efficientnet_b0` + `dual_pool_mlp`)
-Runs the complete 8-step pipeline (Dataset scan $\rightarrow$ Stratified 70/15/15 split $\rightarrow$ Phase 1 head training $\rightarrow$ Phase 2 differential fine-tuning $\rightarrow$ Test evaluation with TTA $\rightarrow$ Plot generation $\rightarrow$ Checkpoint saving $\rightarrow$ Demo prediction):
+Runs the complete 8-step pipeline (Dataset scan → Stratified 70/15/15 split → Phase 1 head training → Phase 2 differential fine-tuning → Test evaluation with TTA → Plot generation → Checkpoint saving → Demo prediction):
 ```bash
 python main.py
 ```
@@ -130,7 +216,7 @@ python main.py
 ### 2. Train with Alternative Backbones & Classifier Heads
 You can test different CNN backbones and classifier heads directly from the command line without editing `main.py`:
 ```bash
-# ConvNeXt-Tiny backbone with Dual-Pool MLP head
+# ConvNeXt-Tiny backbone with Dual-Pool MLP head (BEST — 93.50%)
 python main.py convnext_tiny dual_pool_mlp
 
 # EfficientNet-B0 with Cosine Similarity Classifier head
@@ -172,33 +258,6 @@ python main.py predict path/to/soil_image.jpg
   |    3. Laterite Soil          1.20%   (erodibility: 3/10)   |
   +============================================================+
 ```
-
----
-
-## 📊 Experimental Results
-
-### Training Progression (`efficientnet_b0` + `dual_pool_mlp`)
-* **Total Parameters:** `5,329,541` (`1,321,993` trainable in Phase 1; `4,451,877` trainable in Phase 2)
-* **Phase 1 Best Validation Accuracy:** `90.00%` (Lowest Val Loss: `0.4379` at Epoch 14)
-* **Phase 2 Best Validation Accuracy:** `91.00%` (Lowest Val Loss: `0.3673` at Epoch 9, early stopped at Epoch 19)
-* **Final Test Set Accuracy (with TTA):** **`92.00%`** (`184 / 200` test images correct)
-* **Total Training Time (CPU):** `16.1 minutes`
-
-### Per-Class Test Set Performance (200 Test Images)
-
-| Soil Type | Precision | Recall | F1-Score | Correct / Total | Class Accuracy | Erodibility (Risk) |
-| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **Alluvial_Soil** | 0.800 | 0.667 | 0.727 | 4 / 6 | 66.7% | 6/10 (Medium-High) |
-| **Arid_Soil** | 0.932 | 0.953 | 0.943 | 41 / 43 | 95.3% | 8/10 (High) |
-| **Black Soil** | 0.977 | 0.977 | 0.977 | 43 / 44 | 97.7% | 2/10 (Low) |
-| **Cinder Soil** | 0.833 | 1.000 | 0.909 | 5 / 5 | **100.0%** | 7/10 (High) |
-| **Laterite Soil** | 0.912 | 0.838 | 0.873 | 31 / 37 | 83.8% | 3/10 (Low) |
-| **Mountain_Soil** | 0.933 | 0.933 | 0.933 | 28 / 30 | 93.3% | 4/10 (Medium) |
-| **Peat Soil** | 1.000 | 0.500 | 0.667 | 2 / 4 | 50.0% | 3/10 (Low) |
-| **Red_Soil** | 0.800 | 1.000 | 0.889 | 16 / 16 | **100.0%** | 5/10 (Medium) |
-| **Yellow Soil** | 0.933 | 0.933 | 0.933 | 14 / 15 | 93.3% | 5/10 (Medium) |
-| **Macro Avg** | **0.902** | **0.867** | **0.872** | — | — | — |
-| **Weighted Avg** | **0.923** | **0.920** | **0.918** | **184 / 200** | **92.00%** | — |
 
 ---
 

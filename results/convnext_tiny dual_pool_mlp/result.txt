@@ -1,0 +1,193 @@
+PS S:\Projects\Pocket_soil_project> python main.py convnext_tiny dual_pool_mlp
+
+======================================================================
+  POCKET GEOLOGIST - Soil Erodibility Prediction System
+======================================================================
+  Device      : cpu
+  Backbone    : convnext_tiny
+  Head Type   : dual_pool_mlp
+  Timestamp   : 2026-11-06 17:49:13
+
+======================================================================
+  STEP 1: Loading Dataset
+======================================================================
+Dataset directory : S:\Projects\Pocket_soil_project\final_dataset
+Total images : 1331
+Number of classes : 9
+
+Class distribution:
+    Alluvial_Soil          38 images  (erodibility: 6/10)  ###
+    Arid_Soil             284 images  (erodibility: 8/10)  ############################
+    Black Soil            292 images  (erodibility: 2/10)  #############################
+    Cinder Soil            30 images  (erodibility: 7/10)  ###
+    Laterite Soil         249 images  (erodibility: 3/10)  ########################
+    Mountain_Soil         201 images  (erodibility: 4/10)  ####################
+    Peat Soil              30 images  (erodibility: 3/10)  ###
+    Red_Soil              109 images  (erodibility: 5/10)  ##########
+    Yellow Soil            98 images  (erodibility: 5/10)  #########
+
+  Splitting data (70% train / 15% val / 15% test) ...
+  Training set   :   931 images
+  Validation set :   200 images
+  Test set       :   200 images
+
+======================================================================
+  STEP 2: Creating DataLoaders
+======================================================================
+  Train batches/epoch : 30
+  Val batches         : 7
+  Test batches        : 7
+  Weighted sampling   : Dampened (power=0.5, prevents overfitting)
+
+======================================================================
+  STEP 3: Building Model (convnext_tiny + dual_pool_mlp)
+======================================================================
+Downloading: "https://download.pytorch.org/models/convnext_tiny-983f1562.pth" to C:\Users\Mufrad Mahmud/.cache\torch\hub\checkpoints\convnext_tiny-983f1562.pth
+100.0%
+  Architecture      : convnext_tiny (ImageNet pretrained)
+  Classifier head   : dual_pool_mlp
+  Total parameters  :   28,614,249
+  Trainable params  :      795,657 (2.8%)
+  Backbone status   : FROZEN (Phase 1)
+
+======================================================================
+  STEP 4: Phase 1 - Training Classifier Head (backbone frozen)
+======================================================================
+
+  Epoch   Train Loss   Train Acc    Val Loss     Val Acc      Status
+  --------------------------------------------------------------
+  1       1.2287       62.51        0.9330       84.00        <-- Best
+  2       0.7816       82.81        0.4842       89.00        <-- Best
+  3       0.6749       86.36        0.4321       89.50        <-- Best
+  4       0.6563       87.33        0.4084       87.50        
+  5       0.5962       88.29        0.3996       89.00        
+  6       0.6190       89.58        0.4308       84.50        
+  7       0.5849       90.98        0.3833       89.50        <-- Best
+  8       0.5820       90.98        0.3812       86.50        
+  9       0.5260       93.77        0.3982       87.00        
+  10      0.5424       92.27        0.3662       89.00        
+  11      0.5190       93.56        0.3724       90.50        <-- Best
+  12      0.5407       92.80        0.3749       88.50        
+  13      0.5188       93.02        0.3665       89.50        
+  14      0.5144       93.66        0.3624       89.50        
+  15      0.5190       93.45        0.3764       89.50        
+
+  Best validation accuracy (Phase 1): 90.50% (Lowest Val Loss: 0.3624)
+
+======================================================================
+  STEP 5: Phase 2 - Fine-tuning Backbone (differential LR)
+======================================================================
+  Unfroze last 3/8 backbone blocks (BatchNorm2d kept frozen)
+  Trainable parameters: 27,083,529 / 28,614,249 (94.7%)
+
+  Epoch   Train Loss   Train Acc    Val Loss     Val Acc      Status
+  --------------------------------------------------------------
+  1       0.5430       92.16        0.4076       85.50        
+  2       0.4901       94.63        0.3113       91.50        <-- Best
+  3       0.4831       94.74        0.2997       90.50        
+  4       0.4301       97.42        0.3309       89.50        
+  5       0.4301       96.99        0.3085       90.50        
+  6       0.4104       97.64        0.3304       90.50        
+  7       0.4015       98.07        0.2775       92.00        <-- Best
+  8       0.3948       98.17        0.2610       94.50        <-- Best
+  9       0.3857       98.82        0.2475       93.00        
+  10      0.3785       98.71        0.2624       94.00        
+  11      0.3727       99.14        0.2795       92.50        
+  12      0.3619       99.14        0.3002       91.50        
+  13      0.3557       99.36        0.2679       93.00        
+  14      0.3712       99.14        0.2756       92.00        
+  15      0.3547       99.46        0.3018       92.50        
+  16      0.3523       99.25        0.2720       94.50        
+  17      0.3482       99.57        0.2809       92.50        
+  18      0.3485       99.46        0.2711       92.50        
+
+  Early stopping at epoch 18 (no improvement for 10 epochs)
+
+  Best validation accuracy (Phase 2): 94.50% (Lowest Val Loss: 0.2475)
+
+======================================================================
+  STEP 6: Evaluating on Test Set
+======================================================================
+
+  Classification Report (TTA=Enabled):
+  ------------------------------------------------------------------
+                 precision    recall  f1-score   support
+  
+  Alluvial_Soil      0.600     0.500     0.545         6
+      Arid_Soil      0.933     0.977     0.955        43
+     Black Soil      0.977     0.977     0.977        44
+    Cinder Soil      0.833     1.000     0.909         5
+  Laterite Soil      0.971     0.919     0.944        37
+  Mountain_Soil      0.906     0.967     0.935        30
+      Peat Soil      0.500     0.500     0.500         4
+       Red_Soil      1.000     1.000     1.000        16
+    Yellow Soil      1.000     0.867     0.929        15
+  
+       accuracy                          0.935       200
+      macro avg      0.858     0.856     0.855       200
+   weighted avg      0.935     0.935     0.934       200
+  
+
+  Confusion matrix saved to: S:\Projects\Pocket_soil_project\results\confusion_matrix.png
+
+  Erodibility-Score Analysis (Test Set):
+  ------------------------------------------------------------------
+  Soil Type           Correct   Total     Accuracy    Erodibility
+  ------------------------------------------------------------------
+  Alluvial_Soil       3         6         50.0        6/10 (Medium-High)
+  Arid_Soil           42        43        97.7        8/10 (High)
+  Black Soil          43        44        97.7        2/10 (Low)
+  Cinder Soil         5         5         100.0       7/10 (High)
+  Laterite Soil       34        37        91.9        3/10 (Low)
+  Mountain_Soil       29        30        96.7        4/10 (Medium)
+  Peat Soil           2         4         50.0        3/10 (Low)
+  Red_Soil            16        16        100.0       5/10 (Medium)
+  Yellow Soil         13        15        86.7        5/10 (Medium)
+
+  Overall Test Accuracy: 93.50%
+Training history plot saved to: S:\Projects\Pocket_soil_project\results\training_history.png
+
+======================================================================
+  STEP 7: Saving Model
+======================================================================
+  Model saved to : S:\Projects\Pocket_soil_project\models\soil_erodibility_model.pth
+  File size      : 109.2 MB
+  Results JSON   : S:\Projects\Pocket_soil_project\results\training_results.json
+  Report saved   : S:\Projects\Pocket_soil_project\results\classification_report.txt
+
+======================================================================
+  STEP 8: Demo Prediction (random test image)
+======================================================================
+True label: Mountain_Soil
+
+  +============================================================+
+  |        POCKET GEOLOGIST  -  Erodibility Prediction         |
+  +------------------------------------------------------------+
+  |  Image: 87.jpg                                            |
+  +------------------------------------------------------------+
+  |  Predicted Soil Type : Arid_Soil                          |
+  |  Confidence          :  85.12%                            |
+  +------------------------------------------------------------+
+  |  Erodibility Score   : 8/10                                  |
+  |  K-Factor (USDA)     : 0.52                                   |
+  |  Risk Level          : High                               |
+  |  Risk Meter          : [HIGH] [########--]                |
+  +------------------------------------------------------------+
+  |  Weighted Score (probability-adjusted): 7.44/10            |
+  +------------------------------------------------------------+
+  |  Top 3 Predictions:                                       |
+  |    1. Arid_Soil             85.12%   (erodibility: 8/10)   |
+  |    2. Mountain_Soil          3.86%   (erodibility: 4/10)   |
+  |    3. Laterite Soil          3.08%   (erodibility: 3/10)   |
+  +============================================================+
+
+======================================================================
+  TRAINING COMPLETE
+======================================================================
+  Total time      : 41.0 minutes
+  Test accuracy   : 93.50%
+  Model location  : S:\Projects\Pocket_soil_project\models\soil_erodibility_model.pth
+  Results folder  : S:\Projects\Pocket_soil_project\results
+
+  To predict erodibility on a new image, run:
+    python main.py predict <path_to_soil_image>
