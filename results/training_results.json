@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-11-06T17:04:20.156244",
+  "device": "cpu",
+  "model_name": "efficientnet_b0",
+  "head_type": "dual_pool_mlp",
+  "dataset_size": 1331,
+  "num_classes": 9,
+  "class_names": [
+    "Alluvial_Soil",
+    "Arid_Soil",
+    "Black Soil",
+    "Cinder Soil",
+    "Laterite Soil",
+    "Mountain_Soil",
+    "Peat Soil",
+    "Red_Soil",
+    "Yellow Soil"
+  ],
+  "test_accuracy": 92.0,
+  "phase1_best_val_acc": 90.0,
+  "phase2_best_val_acc": 91.0,
+  "best_val_loss": 0.36725852578878404
+}

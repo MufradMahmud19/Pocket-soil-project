@@ -1,0 +1,22 @@
+Pocket Geologist - Classification Report
+============================================================
+Date: 2026-11-06 17:04:20
+Device: cpu
+Backbone: efficientnet_b0 | Head: dual_pool_mlp
+Test Accuracy: 92.00%
+
+               precision    recall  f1-score   support
+
+Alluvial_Soil      0.800     0.667     0.727         6
+    Arid_Soil      0.932     0.953     0.943        43
+   Black Soil      0.977     0.977     0.977        44
+  Cinder Soil      0.833     1.000     0.909         5
+Laterite Soil      0.912     0.838     0.873        37
+Mountain_Soil      0.933     0.933     0.933        30
+    Peat Soil      1.000     0.500     0.667         4
+     Red_Soil      0.800     1.000     0.889        16
+  Yellow Soil      0.933     0.933     0.933        15
+
+     accuracy                          0.920       200
+    macro avg      0.902     0.867     0.872       200
+ weighted avg      0.923     0.920     0.918       200
